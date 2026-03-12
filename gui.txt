@@ -1,0 +1,72 @@
+## top level gui design
+
++-el Commander--------------------+---------------------------------+
+|                                 |                                 |
+|  paneFileExplorerL              |  paneFileExplorerR              |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
+|                                 |                                 |
++---------------------------------+---------------------------------+
+|  paneInfoL                      |  paneInfoR                      |
++---------------------------------+---------------------------------+
+|  paneExecuteTerminalCommand                                       |
++-------------------------------------------------------------------+
+|  paneCommandBar                                                   |
++-------------------------------------------------------------------+
+
+## paneFileExplorer design - apply same design to both L & R panes
+
++---------------------------------+
+|  pathTextBox                    |
+|  fileList                       |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
+|                                 |
++---------------------------------+
+
+pathTextBox: displays current path and user can change it's value
+fileList: scrollable file list of files in path set by pathTextBox.
+          listitem is in format: filename.extension aligned left and in the same row filesize (if item is file) in kB
+		  if list item is directory, don't show size
+		  
+
+## paneInfo
++---------------------------------+
+|  number of files in pathTextBox |
++---------------------------------+
+
+## paneExecuteTerminalCommand
++-------------------------------------------------------------------+
+|  label: textBox                                                   |
++-------------------------------------------------------------------+
+label - shows current folder path, is path is longer then 26 chars, truncate
+textBox: user can enter shell command that will be executed in new terminal and in the path set in paneCommandBar
+
+## commandBar
++-------------------------------------------------------------------+
+|  buttons                                                          |
++-------------------------------------------------------------------+
+
+buttons: F4 Edit | F5 Copy | F6 Move | F7 New Folder | F8 Delete | F12 Exit
