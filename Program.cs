@@ -129,8 +129,9 @@ var btnCopy      = new Button("F5 Copy")      { X = Pos.Right(btnEdit)        + 
 var btnMove      = new Button("F6 Move")      { X = Pos.Right(btnCopy)        + 1, Y = 0 };
 var btnNewFolder = new Button("F7 New Folder"){ X = Pos.Right(btnMove)        + 1, Y = 0 };
 var btnDelete    = new Button("F8 Delete")    { X = Pos.Right(btnNewFolder)   + 1, Y = 0 };
-var btnExit      = new Button("F12 Exit")     { X = Pos.Right(btnDelete)      + 1, Y = 0 };
-cmdBarFrame.Add(btnColor, btnTerminal, btnEdit, btnCopy, btnMove, btnNewFolder, btnDelete, btnExit);
+var btnBatchRen  = new Button("F9 BATCH REN") { X = Pos.Right(btnDelete)      + 1, Y = 0 };
+var btnExit      = new Button("F12 Exit")     { X = Pos.Right(btnBatchRen)    + 1, Y = 0 };
+cmdBarFrame.Add(btnColor, btnTerminal, btnEdit, btnCopy, btnMove, btnNewFolder, btnDelete, btnBatchRen, btnExit);
 
 // ── Assemble window ───────────────────────────────────────────────────────────
 
@@ -158,6 +159,8 @@ Application.Top.Add(tooSmallOverlay);
 // ── Active pane tracking ──────────────────────────────────────────────────────
 
 FileExplorerPane activePane = leftPane;
+bool isBatchRenameFormOpen = false;
+Action? closeBatchRenameForm = null;
 
 void SetActivePane(FileExplorerPane pane)
 {
@@ -244,11 +247,33 @@ btnCopy.Clicked      += () => CopySelected();
 btnMove.Clicked      += () => MoveSelected();
 btnNewFolder.Clicked += () => CreateNewFolder();
 btnDelete.Clicked    += () => DeleteSelected();
+btnBatchRen.Clicked  += () => ShowBatchRenameForm();
 
 // ── Global F-key shortcuts ────────────────────────────────────────────────────
 
 Application.Top.KeyPress += (e) =>
 {
+    if (isBatchRenameFormOpen)
+    {
+        switch (e.KeyEvent.Key)
+        {
+            case Key.F1:
+                closeBatchRenameForm?.Invoke();
+                e.Handled = true;
+                return;
+            case Key.F2:
+            case Key.F4:
+            case Key.F5:
+            case Key.F6:
+            case Key.F7:
+            case Key.F8:
+            case Key.F9:
+            case Key.F12:
+                e.Handled = true;
+                return;
+        }
+    }
+
     switch (e.KeyEvent.Key)
     {
         case Key.F1:  ShowColorDialog();       e.Handled = true; break;
@@ -258,6 +283,7 @@ Application.Top.KeyPress += (e) =>
         case Key.F6:  MoveSelected();     e.Handled = true; break;
         case Key.F7:  CreateNewFolder();  e.Handled = true; break;
         case Key.F8:  DeleteSelected();   e.Handled = true; break;
+        case Key.F9:  ShowBatchRenameForm(); e.Handled = true; break;
         case Key.F12: ConfirmExit();      e.Handled = true; break;
         case Key.Tab:
             var target = activePane == leftPane ? rightPane : leftPane;
@@ -422,6 +448,101 @@ void CreateNewFolder()
     btnCancel.Clicked += () => Application.RequestStop();
 
     Application.Run(dialog);
+}
+
+void ShowBatchRenameForm()
+{
+    if (isBatchRenameFormOpen)
+        return;
+
+    var selectedItems = activePane.GetSourceItems();
+    var currentNames = selectedItems.Select(item => item.Name).ToList();
+    var futureNames = new List<string>(currentNames);
+
+    var formBatchRename = new Window("Batch Rename")
+    {
+        X = 0,
+        Y = 0,
+        Width = Dim.Fill(),
+        Height = Dim.Fill(),
+        ColorScheme = win.ColorScheme
+    };
+
+    var frameCurrentNames = new FrameView("Current file names")
+    {
+        X = 0,
+        Y = 0,
+        Width = Dim.Percent(50),
+        Height = Dim.Percent(50)
+    };
+    var listCurrentNames = new ListView(currentNames)
+    {
+        X = 0,
+        Y = 0,
+        Width = Dim.Fill(),
+        Height = Dim.Fill(),
+        AllowsMarking = false
+    };
+    frameCurrentNames.Add(listCurrentNames);
+
+    var frameFutureNames = new FrameView("Future file names")
+    {
+        X = Pos.Right(frameCurrentNames),
+        Y = 0,
+        Width = Dim.Fill(),
+        Height = Dim.Percent(50)
+    };
+    var listFutureNames = new ListView(futureNames)
+    {
+        X = 0,
+        Y = 0,
+        Width = Dim.Fill(),
+        Height = Dim.Fill(),
+        AllowsMarking = false
+    };
+    frameFutureNames.Add(listFutureNames);
+
+    var frameControls = new FrameView("Controls")
+    {
+        X = 0,
+        Y = Pos.Bottom(frameCurrentNames),
+        Width = Dim.Fill(),
+        Height = Dim.Fill()
+    };
+    var btnCancelBatchRename = new Button("F1 Cancel")
+    {
+        X = 1,
+        Y = 0
+    };
+    frameControls.Add(btnCancelBatchRename);
+
+    formBatchRename.Add(frameCurrentNames, frameFutureNames, frameControls);
+
+    void CloseBatchRenameForm()
+    {
+        Application.RequestStop();
+    }
+
+    btnCancelBatchRename.Clicked += CloseBatchRenameForm;
+    formBatchRename.KeyPress += (e) =>
+    {
+        if (e.KeyEvent.Key != Key.F1)
+            return;
+
+        CloseBatchRenameForm();
+        e.Handled = true;
+    };
+
+    isBatchRenameFormOpen = true;
+    closeBatchRenameForm = CloseBatchRenameForm;
+
+    btnCancelBatchRename.SetFocus();
+    Application.Run(formBatchRename);
+
+    isBatchRenameFormOpen = false;
+    closeBatchRenameForm = null;
+    activePane.SetFocusOnList();
+    UpdatePathDisplay();
 }
 
 void DeleteSelected()
