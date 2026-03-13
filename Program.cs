@@ -457,6 +457,11 @@ void CreateNewFolder()
 
 void ShowBatchRenameForm()
 {
+    const int batchRenameControlsHeight = 15;
+    const int batchRenameTopControlsHeight = 7;
+    const int batchRenameSearchReplaceHeight = 4;
+    const int batchRenameActionHeight = 4;
+
     if (isBatchRenameFormOpen)
         return;
 
@@ -490,7 +495,7 @@ void ShowBatchRenameForm()
         X = 0,
         Y = 0,
         Width = Dim.Percent(50),
-        Height = Dim.Percent(38)
+        Height = Dim.Fill(batchRenameControlsHeight)
     };
     var listCurrentNames = new ListView(currentNames)
     {
@@ -508,7 +513,7 @@ void ShowBatchRenameForm()
         X = Pos.Right(frameCurrentNames),
         Y = 0,
         Width = Dim.Fill(),
-        Height = Dim.Percent(38)
+        Height = Dim.Fill(batchRenameControlsHeight)
     };
     var futureNames = new List<string>(currentNames);
     var listFutureNames = new ListView(futureNames)
@@ -527,14 +532,14 @@ void ShowBatchRenameForm()
         X = 0,
         Y = Pos.Bottom(frameCurrentNames),
         Width = Dim.Fill(),
-        Height = Dim.Fill()
+        Height = batchRenameControlsHeight
     };
     var frameRenameMask = new FrameView("Rename mask")
     {
         X = 0,
         Y = 0,
         Width = Dim.Percent(45),
-        Height = 7
+        Height = batchRenameTopControlsHeight
     };
     var lblFileNameMask = new Label("File name")
     {
@@ -572,7 +577,7 @@ void ShowBatchRenameForm()
         X = Pos.Right(frameRenameMask),
         Y = 0,
         Width = 28,
-        Height = 7
+        Height = batchRenameTopControlsHeight
     };
     var txtCounterStart = new TextField("1") { X = 12, Y = 0, Width = 5 };
     var txtCounterStep = new TextField("1") { X = 12, Y = 2, Width = 5 };
@@ -602,7 +607,7 @@ void ShowBatchRenameForm()
         X = Pos.Right(frameCounter),
         Y = 0,
         Width = Dim.Fill(),
-        Height = 7
+        Height = batchRenameTopControlsHeight
     };
     var radioCaseMode = new RadioGroup(
         new[]
@@ -627,7 +632,7 @@ void ShowBatchRenameForm()
         X = 0,
         Y = Pos.Bottom(frameRenameMask),
         Width = Dim.Fill(),
-        Height = 4
+        Height = batchRenameSearchReplaceHeight
     };
     var txtSearchFor = new TextField("")
     {
@@ -668,7 +673,7 @@ void ShowBatchRenameForm()
         X = 0,
         Y = Pos.Bottom(frameSearchReplace),
         Width = Dim.Fill(),
-        Height = Dim.Fill()
+        Height = batchRenameActionHeight
     };
     frameActionButtons.Add(statusLabel, btnCancelBatchRename, btnStartBatchRename);
 
