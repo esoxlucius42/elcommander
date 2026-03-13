@@ -181,5 +181,9 @@ public class FileListDataSource : IListDataSource
         };
         driver.SetAttribute(new Terminal.Gui.Attribute(fg, bg));
         driver.AddStr(display);
+
+        // ListView may clear the remaining rows after the last rendered item
+        // using the current driver attribute, so restore the normal list colors.
+        driver.SetAttribute(container.ColorScheme.Normal);
     }
 }

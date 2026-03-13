@@ -1,27 +1,27 @@
 {
   "format": 1,
   "restore": {
-    "C:\\IT\\_code\\elcommander\\elcommander.csproj": {}
+    "/var/home/esox/dev/java/elcommander/elcommander.csproj": {}
   },
   "projects": {
-    "C:\\IT\\_code\\elcommander\\elcommander.csproj": {
+    "/var/home/esox/dev/java/elcommander/elcommander.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\IT\\_code\\elcommander\\elcommander.csproj",
+        "projectUniqueName": "/var/home/esox/dev/java/elcommander/elcommander.csproj",
         "projectName": "elcommander",
-        "projectPath": "C:\\IT\\_code\\elcommander\\elcommander.csproj",
-        "packagesPath": "C:\\Users\\hrahov\\.nuget\\packages\\",
-        "outputPath": "C:\\IT\\_code\\elcommander\\obj\\",
+        "projectPath": "/var/home/esox/dev/java/elcommander/elcommander.csproj",
+        "packagesPath": "/home/esox/.nuget/packages/",
+        "outputPath": "/var/home/esox/dev/java/elcommander/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\IT\\_code\\elcommander\\NuGet.Config",
-          "C:\\Users\\hrahov\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/var/home/esox/dev/java/elcommander/NuGet.Config",
+          "/home/esox/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "C:\\IT\\_code\\elcommander\\packages": {}
+          "/var/home/esox/dev/java/elcommander/packages": {}
         },
         "frameworks": {
           "net8.0": {
@@ -33,13 +33,7 @@
           "warnAsError": [
             "NU1605"
           ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.300"
+        }
       },
       "frameworks": {
         "net8.0": {
@@ -66,7 +60,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/lib64/dotnet/sdk/8.0.124/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

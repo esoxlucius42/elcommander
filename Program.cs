@@ -34,6 +34,14 @@ var win = new Window("el Commander")
     Width = Dim.Fill(),
     Height = Dim.Fill()
 };
+win.ColorScheme = new ColorScheme
+{
+    Normal    = new Terminal.Gui.Attribute(Color.White,    Color.Blue),
+    Focus     = new Terminal.Gui.Attribute(Color.White,    Color.Blue),
+    HotNormal = new Terminal.Gui.Attribute(Color.White,    Color.Blue),
+    HotFocus  = new Terminal.Gui.Attribute(Color.White,    Color.Blue),
+    Disabled  = new Terminal.Gui.Attribute(Color.DarkGray, Color.Blue),
+};
 
 // ── File explorer panes ───────────────────────────────────────────────────────
 
