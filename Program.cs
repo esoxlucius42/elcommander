@@ -815,14 +815,24 @@ void ShowBatchRenameForm()
         BatchRenameApplyResult result = BatchRenameEngine.ApplyPreview(lastPreview);
         if (!result.Success)
         {
-            MessageBox.ErrorQuery("Batch Rename", string.Join("\n", result.Errors), "OK");
+            if (result.Errors.Count == 0)
+            {
+                MessageBox.ErrorQuery("Batch Rename", result.Message, "OK");
+            }
+            else
+            {
+                int response = MessageBox.ErrorQuery("Batch Rename", result.Message, "Details", "OK");
+                if (response == 0)
+                    MessageBox.ErrorQuery("Batch Rename Details", string.Join("\n", result.Errors), "OK");
+            }
+
             RefreshPreview();
             return;
         }
 
         if (result.RenamedCount == 0)
         {
-            MessageBox.Query("Batch Rename", "No files need renaming.", "OK");
+            MessageBox.Query("Batch Rename", result.Message, "OK");
             return;
         }
 

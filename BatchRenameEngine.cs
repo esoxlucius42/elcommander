@@ -42,6 +42,8 @@ public sealed class BatchRenameApplyResult
 {
     public required bool Success { get; init; }
     public required int RenamedCount { get; init; }
+    public required string Message { get; init; }
+    public required bool RollbackSucceeded { get; init; }
     public required IReadOnlyList<string> Errors { get; init; }
 }
 
@@ -147,6 +149,8 @@ public static class BatchRenameEngine
             {
                 Success = false,
                 RenamedCount = 0,
+                Message = "Batch rename cannot start because the preview contains invalid entries.",
+                RollbackSucceeded = true,
                 Errors = preview.Items.Where(item => item.Error is not null).Select(item => item.Error!).Distinct().ToList()
             };
         }
@@ -162,15 +166,19 @@ public static class BatchRenameEngine
             {
                 Success = true,
                 RenamedCount = 0,
+                Message = "No files need renaming.",
+                RollbackSucceeded = true,
                 Errors = []
             };
         }
 
         var movedToTemp = new List<StagedRename>(operations.Count);
+        PendingRename? failedStage = null;
         try
         {
             foreach (PendingRename operation in operations)
             {
+                failedStage = operation;
                 string tempPath = CreateTempPath(operation.SourceFullPath);
                 File.Move(operation.SourceFullPath, tempPath, overwrite: false);
                 movedToTemp.Add(new StagedRename(operation.SourceFullPath, tempPath, operation.TargetFullPath));
@@ -179,21 +187,20 @@ public static class BatchRenameEngine
         catch (Exception ex)
         {
             var rollbackErrors = RollbackTempMoves(movedToTemp);
-            var errors = new List<string> { $"Unable to stage rename: {ex.Message}" };
-            errors.AddRange(rollbackErrors);
-            return new BatchRenameApplyResult
-            {
-                Success = false,
-                RenamedCount = 0,
-                Errors = errors
-            };
+            return BuildFailureResult(
+                failedStage,
+                ex,
+                rollbackErrors,
+                isFinalizing: false);
         }
 
         var completedTargets = new List<StagedRename>(operations.Count);
+        StagedRename? failedFinalize = null;
         try
         {
             foreach (StagedRename stagedRename in movedToTemp)
             {
+                failedFinalize = stagedRename;
                 File.Move(stagedRename.TempFullPath, stagedRename.TargetFullPath, overwrite: false);
                 completedTargets.Add(stagedRename);
             }
@@ -201,21 +208,63 @@ public static class BatchRenameEngine
         catch (Exception ex)
         {
             var rollbackErrors = RollbackFailedApply(completedTargets, movedToTemp);
-            var errors = new List<string> { $"Unable to finish rename: {ex.Message}" };
-            errors.AddRange(rollbackErrors);
-            return new BatchRenameApplyResult
-            {
-                Success = false,
-                RenamedCount = 0,
-                Errors = errors
-            };
+            PendingRename failedOperation = failedFinalize is null
+                ? new PendingRename("", "")
+                : new PendingRename(failedFinalize.SourceFullPath, failedFinalize.TargetFullPath);
+
+            return BuildFailureResult(
+                failedOperation,
+                ex,
+                rollbackErrors,
+                isFinalizing: true);
         }
 
         return new BatchRenameApplyResult
         {
             Success = true,
             RenamedCount = completedTargets.Count,
+            Message = $"Batch rename completed. {completedTargets.Count} file{(completedTargets.Count == 1 ? "" : "s")} renamed.",
+            RollbackSucceeded = true,
             Errors = []
+        };
+    }
+
+    private static BatchRenameApplyResult BuildFailureResult(
+        PendingRename? failedOperation,
+        Exception exception,
+        IReadOnlyList<string> rollbackErrors,
+        bool isFinalizing)
+    {
+        string sourceName = failedOperation is null || string.IsNullOrEmpty(failedOperation.SourceFullPath)
+            ? "an unknown file"
+            : $"'{Path.GetFileName(failedOperation.SourceFullPath)}'";
+        string targetName = failedOperation is null || string.IsNullOrEmpty(failedOperation.TargetFullPath)
+            ? "its target name"
+            : $"'{Path.GetFileName(failedOperation.TargetFullPath)}'";
+        string message = isFinalizing
+            ? $"Batch rename failed while renaming {sourceName} to {targetName}: {exception.Message}"
+            : $"Batch rename failed while staging {sourceName}: {exception.Message}";
+
+        bool rollbackSucceeded = rollbackErrors.Count == 0;
+        message += rollbackSucceeded
+            ? " All earlier rename steps were rolled back, so no partial rename was left behind."
+            : " Rollback also failed for some files, so manual recovery may be required.";
+
+        var errors = new List<string>
+        {
+            isFinalizing
+                ? $"Final rename failed for {sourceName} -> {targetName}: {exception.Message}"
+                : $"Staging rename failed for {sourceName}: {exception.Message}"
+        };
+        errors.AddRange(rollbackErrors);
+
+        return new BatchRenameApplyResult
+        {
+            Success = false,
+            RenamedCount = 0,
+            Message = message,
+            RollbackSucceeded = rollbackSucceeded,
+            Errors = errors
         };
     }
 
