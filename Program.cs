@@ -457,9 +457,9 @@ void CreateNewFolder()
 
 void ShowBatchRenameForm()
 {
-    const int batchRenameControlsHeight = 15;
+    const int batchRenameControlsHeight = 16;
     const int batchRenameTopControlsHeight = 7;
-    const int batchRenameSearchReplaceHeight = 4;
+    const int batchRenameSearchReplaceHeight = 5;
     const int batchRenameActionHeight = 4;
 
     if (isBatchRenameFormOpen)
@@ -666,14 +666,14 @@ void ShowBatchRenameForm()
     var txtReplaceWith = new TextField("")
     {
         X = 15,
-        Y = 1,
+        Y = 2,
         Width = Dim.Fill(16),
         ColorScheme = batchRenameMaskFieldColors
     };
     frameSearchReplace.Add(
         new Label("Search for:") { X = 1, Y = 0 },
         txtSearchFor,
-        new Label("Replace with:") { X = 1, Y = 1 },
+        new Label("Replace with:") { X = 1, Y = 2 },
         txtReplaceWith);
 
     var statusLabel = new Label("")
