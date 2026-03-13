@@ -455,7 +455,9 @@ void ShowBatchRenameForm()
     if (isBatchRenameFormOpen)
         return;
 
-    var selectedItems = activePane.GetSourceItems();
+    var selectedItems = activePane.GetSourceItems()
+        .Where(item => !item.IsDirectory)
+        .ToList();
     if (selectedItems.Count == 0)
         return;
 
