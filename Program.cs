@@ -592,29 +592,26 @@ void ShowBatchRenameForm()
         Width = 28,
         Height = batchRenameTopControlsHeight
     };
-    var txtCounterStart = new TextField("1")
+    var txtCounterStart = new RightAlignedTextField("1")
     {
         X = Pos.AnchorEnd(9),
         Y = 0,
         Width = 8,
-        ColorScheme = batchRenameMaskFieldColors,
-        TextAlignment = TextAlignment.Right
+        ColorScheme = batchRenameMaskFieldColors
     };
-    var txtCounterStep = new TextField("1")
+    var txtCounterStep = new RightAlignedTextField("1")
     {
         X = Pos.AnchorEnd(9),
         Y = 2,
         Width = 8,
-        ColorScheme = batchRenameMaskFieldColors,
-        TextAlignment = TextAlignment.Right
+        ColorScheme = batchRenameMaskFieldColors
     };
-    var txtCounterDigits = new TextField("1")
+    var txtCounterDigits = new RightAlignedTextField("1")
     {
         X = Pos.AnchorEnd(9),
         Y = 4,
         Width = 8,
-        ColorScheme = batchRenameMaskFieldColors,
-        TextAlignment = TextAlignment.Right
+        ColorScheme = batchRenameMaskFieldColors
     };
     frameCounter.Add(
         new Label("Start at:") { X = 1, Y = 0 },
