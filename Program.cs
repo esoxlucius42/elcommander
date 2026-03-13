@@ -470,6 +470,14 @@ void ShowBatchRenameForm()
         Height = Dim.Fill(),
         ColorScheme = win.ColorScheme
     };
+    var batchRenameListColors = new ColorScheme
+    {
+        Normal    = new Terminal.Gui.Attribute(Color.BrightGreen, Color.Black),
+        Focus     = new Terminal.Gui.Attribute(Color.Black,       Color.BrightGreen),
+        HotNormal = new Terminal.Gui.Attribute(Color.BrightGreen, Color.Black),
+        HotFocus  = new Terminal.Gui.Attribute(Color.Black,       Color.BrightGreen),
+        Disabled  = new Terminal.Gui.Attribute(Color.DarkGray,    Color.Black),
+    };
 
     var frameCurrentNames = new FrameView("Current file names")
     {
@@ -484,7 +492,8 @@ void ShowBatchRenameForm()
         Y = 0,
         Width = Dim.Fill(),
         Height = Dim.Fill(),
-        AllowsMarking = false
+        AllowsMarking = false,
+        ColorScheme = batchRenameListColors
     };
     frameCurrentNames.Add(listCurrentNames);
 
@@ -501,7 +510,8 @@ void ShowBatchRenameForm()
         Y = 0,
         Width = Dim.Fill(),
         Height = Dim.Fill(),
-        AllowsMarking = false
+        AllowsMarking = false,
+        ColorScheme = batchRenameListColors
     };
     frameFutureNames.Add(listFutureNames);
 
