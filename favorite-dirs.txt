@@ -1,0 +1,4 @@
+/home/esox/dev/java/elcommander
+/home/esox/dev/java/homesite
+/home/esox
+/home/esox/Pictures/Screenshots

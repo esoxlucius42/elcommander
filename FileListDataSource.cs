@@ -107,10 +107,22 @@ public class FileListDataSource : IListDataSource
     public bool IsUserMarked(int index) =>
         index >= 0 && index < _userMarks.Length && _userMarks[index];
 
-    public void ToggleUserMark(int index)
+    public bool ToggleUserMark(int index)
     {
-        if (index >= 0 && index < _userMarks.Length)
-            _userMarks[index] = !_userMarks[index];
+        if (index < 0 || index >= _userMarks.Length)
+            return false;
+
+        _userMarks[index] = !_userMarks[index];
+        return true;
+    }
+
+    public bool SetUserMark(int index, bool value)
+    {
+        if (index < 0 || index >= _userMarks.Length || _userMarks[index] == value)
+            return false;
+
+        _userMarks[index] = value;
+        return true;
     }
 
     public void ClearUserMarks()

@@ -46,9 +46,11 @@ win.ColorScheme = new ColorScheme
 // ── File explorer panes ───────────────────────────────────────────────────────
 
 string startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+var favoriteDirectoriesStore = new FavoriteDirectoriesStore();
+List<string> favoriteDirectories = [.. favoriteDirectoriesStore.Load()];
 
-var leftPane  = new FileExplorerPane(startPath);
-var rightPane = new FileExplorerPane(startPath);
+var leftPane  = new FileExplorerPane(startPath, favoriteDirectories);
+var rightPane = new FileExplorerPane(startPath, favoriteDirectories);
 
 leftPane.Frame.X      = 0;
 leftPane.Frame.Y      = 0;
@@ -174,6 +176,11 @@ void UpdateInfoLabel(FileExplorerPane pane)
 leftPane.GotFocus  += SetActivePane;
 rightPane.GotFocus += SetActivePane;
 
+leftPane.AddFavoriteRequested += HandleAddFavoriteRequested;
+rightPane.AddFavoriteRequested += HandleAddFavoriteRequested;
+leftPane.RemoveFavoriteRequested += HandleRemoveFavoriteRequested;
+rightPane.RemoveFavoriteRequested += HandleRemoveFavoriteRequested;
+
 leftPane.GotFocus  += _ => UpdatePathDisplay();
 rightPane.GotFocus += _ => UpdatePathDisplay();
 
@@ -190,6 +197,38 @@ leftPane.SelectionChanged  += p => { if (activePane == p) UpdatePathDisplay(); }
 rightPane.SelectionChanged += p => { if (activePane == p) UpdatePathDisplay(); };
 
 void UpdatePathDisplay() => pathDisplay.Text = activePane.GetHighlightedFullPath();
+
+void RefreshFavoriteDirectories()
+{
+    leftPane.RefreshFavoriteDirectories(favoriteDirectories);
+    rightPane.RefreshFavoriteDirectories(favoriteDirectories);
+}
+
+void HandleAddFavoriteRequested(FileExplorerPane pane)
+{
+    if (!FavoriteDirectoriesStore.TryNormalizePath(pane.CurrentPath, out string normalizedPath))
+        return;
+
+    if (favoriteDirectories.Any(path => FavoriteDirectoriesStore.DirectoryPathComparer.Equals(path, normalizedPath)))
+        return;
+
+    favoriteDirectories.Add(normalizedPath);
+    favoriteDirectories = [.. favoriteDirectoriesStore.Save(favoriteDirectories)];
+    RefreshFavoriteDirectories();
+}
+
+void HandleRemoveFavoriteRequested(FileExplorerPane pane)
+{
+    if (!FavoriteDirectoriesStore.TryNormalizePath(pane.CurrentPath, out string normalizedPath))
+        return;
+
+    int removed = favoriteDirectories.RemoveAll(path =>
+        FavoriteDirectoriesStore.DirectoryPathComparer.Equals(path, normalizedPath));
+    if (removed == 0) return;
+
+    favoriteDirectories = [.. favoriteDirectoriesStore.Save(favoriteDirectories)];
+    RefreshFavoriteDirectories();
+}
 
 UpdateInfoLabel(leftPane);
 UpdateInfoLabel(rightPane);
