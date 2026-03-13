@@ -489,6 +489,14 @@ void ShowBatchRenameForm()
         HotFocus  = new Terminal.Gui.Attribute(Color.Black,       Color.BrightGreen),
         Disabled  = new Terminal.Gui.Attribute(Color.DarkGray,    Color.Black),
     };
+    var batchRenameMaskFieldColors = new ColorScheme
+    {
+        Normal    = new Terminal.Gui.Attribute(Color.BrightGreen, Color.Black),
+        Focus     = new Terminal.Gui.Attribute(Color.BrightGreen, Color.Black),
+        HotNormal = new Terminal.Gui.Attribute(Color.BrightGreen, Color.Black),
+        HotFocus  = new Terminal.Gui.Attribute(Color.BrightGreen, Color.Black),
+        Disabled  = new Terminal.Gui.Attribute(Color.DarkGray,    Color.Black),
+    };
 
     var frameCurrentNames = new FrameView("Current file names")
     {
@@ -550,7 +558,8 @@ void ShowBatchRenameForm()
     {
         X = 1,
         Y = 1,
-        Width = Dim.Percent(62)
+        Width = Dim.Percent(62),
+        ColorScheme = batchRenameMaskFieldColors
     };
     var lblExtensionMask = new Label("Extension")
     {
@@ -561,16 +570,17 @@ void ShowBatchRenameForm()
     {
         X = Pos.Right(txtFileNameMask) + 2,
         Y = 1,
-        Width = Dim.Fill(2)
+        Width = Dim.Fill(2),
+        ColorScheme = batchRenameMaskFieldColors
     };
     frameRenameMask.Add(
         lblFileNameMask,
         txtFileNameMask,
         lblExtensionMask,
         txtExtensionMask,
-        new Label("[N] - file name") { X = 1, Y = 3 },
-        new Label("[E] - extension") { X = 1, Y = 4 },
-        new Label("[C] - counter") { X = 1, Y = 5 });
+        new Label("[C] - counter") { X = 1, Y = 3 },
+        new Label("[N] - file name") { X = 1, Y = 4 },
+        new Label("[E] - extension") { X = 1, Y = 5 });
 
     var frameCounter = new FrameView("Counter")
     {
