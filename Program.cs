@@ -456,6 +456,9 @@ void ShowBatchRenameForm()
         return;
 
     var selectedItems = activePane.GetSourceItems();
+    if (selectedItems.Count == 0)
+        return;
+
     var currentNames = selectedItems.Select(item => item.Name).ToList();
     var futureNames = new List<string>(currentNames);
 
@@ -512,7 +515,7 @@ void ShowBatchRenameForm()
     var btnCancelBatchRename = new Button("F1 Cancel")
     {
         X = 1,
-        Y = 0
+        Y = Pos.AnchorEnd(1)
     };
     frameControls.Add(btnCancelBatchRename);
 
