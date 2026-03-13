@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("elcommander")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+35ac3ac650cef3b951923729ae52659a7d2eeb05")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ac4b15cbbdbc9d708da13d000afcc72cc07c5599")]
 [assembly: System.Reflection.AssemblyProductAttribute("elcommander")]
 [assembly: System.Reflection.AssemblyTitleAttribute("elcommander")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

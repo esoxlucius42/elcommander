@@ -2,3 +2,4 @@
 /home/esox/dev/java/homesite
 /home/esox
 /home/esox/Pictures/Screenshots
+/run/media/system/warehouse/_Skladište/MyDocuments/

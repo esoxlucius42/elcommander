@@ -660,13 +660,15 @@ void ShowBatchRenameForm()
     {
         X = 15,
         Y = 0,
-        Width = Dim.Fill(16)
+        Width = Dim.Fill(16),
+        ColorScheme = batchRenameMaskFieldColors
     };
     var txtReplaceWith = new TextField("")
     {
         X = 15,
         Y = 1,
-        Width = Dim.Fill(16)
+        Width = Dim.Fill(16),
+        ColorScheme = batchRenameMaskFieldColors
     };
     frameSearchReplace.Add(
         new Label("Search for:") { X = 1, Y = 0 },
