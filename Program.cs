@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using NStack;
 using Terminal.Gui;
 
 const int MIN_COLS = 128;
@@ -161,6 +162,7 @@ Application.Top.Add(tooSmallOverlay);
 FileExplorerPane activePane = leftPane;
 bool isBatchRenameFormOpen = false;
 Action? closeBatchRenameForm = null;
+Action? submitBatchRenameForm = null;
 
 void SetActivePane(FileExplorerPane pane)
 {
@@ -261,9 +263,12 @@ Application.Top.KeyPress += (e) =>
                 closeBatchRenameForm?.Invoke();
                 e.Handled = true;
                 return;
+            case Key.F5:
+                submitBatchRenameForm?.Invoke();
+                e.Handled = true;
+                return;
             case Key.F2:
             case Key.F4:
-            case Key.F5:
             case Key.F6:
             case Key.F7:
             case Key.F8:
@@ -462,7 +467,6 @@ void ShowBatchRenameForm()
         return;
 
     var currentNames = selectedItems.Select(item => item.Name).ToList();
-    var futureNames = new List<string>(currentNames);
 
     var formBatchRename = new Window("Batch Rename")
     {
@@ -486,7 +490,7 @@ void ShowBatchRenameForm()
         X = 0,
         Y = 0,
         Width = Dim.Percent(50),
-        Height = Dim.Percent(50)
+        Height = Dim.Percent(38)
     };
     var listCurrentNames = new ListView(currentNames)
     {
@@ -504,8 +508,9 @@ void ShowBatchRenameForm()
         X = Pos.Right(frameCurrentNames),
         Y = 0,
         Width = Dim.Fill(),
-        Height = Dim.Percent(50)
+        Height = Dim.Percent(38)
     };
+    var futureNames = new List<string>(currentNames);
     var listFutureNames = new ListView(futureNames)
     {
         X = 0,
@@ -524,38 +529,366 @@ void ShowBatchRenameForm()
         Width = Dim.Fill(),
         Height = Dim.Fill()
     };
+    var frameRenameMask = new FrameView("Rename mask")
+    {
+        X = 0,
+        Y = 0,
+        Width = Dim.Percent(45),
+        Height = 7
+    };
+    var lblFileNameMask = new Label("File name")
+    {
+        X = 1,
+        Y = 0
+    };
+    var txtFileNameMask = new TextField("[N]")
+    {
+        X = 1,
+        Y = 1,
+        Width = Dim.Percent(62)
+    };
+    var lblExtensionMask = new Label("Extension")
+    {
+        X = Pos.Right(txtFileNameMask) + 2,
+        Y = 0
+    };
+    var txtExtensionMask = new TextField("[E]")
+    {
+        X = Pos.Right(txtFileNameMask) + 2,
+        Y = 1,
+        Width = Dim.Fill(2)
+    };
+    frameRenameMask.Add(
+        lblFileNameMask,
+        txtFileNameMask,
+        lblExtensionMask,
+        txtExtensionMask,
+        new Label("[N] - file name") { X = 1, Y = 3 },
+        new Label("[E] - extension") { X = 1, Y = 4 },
+        new Label("[C] - counter") { X = 1, Y = 5 });
+
+    var frameCounter = new FrameView("Counter")
+    {
+        X = Pos.Right(frameRenameMask),
+        Y = 0,
+        Width = 28,
+        Height = 7
+    };
+    var txtCounterStart = new TextField("1") { X = 12, Y = 0, Width = 5 };
+    var txtCounterStep = new TextField("1") { X = 12, Y = 2, Width = 5 };
+    var txtCounterDigits = new TextField("1") { X = 12, Y = 4, Width = 5 };
+    var btnCounterStartUp = new Button("+") { X = Pos.Right(txtCounterStart) + 1, Y = 0, Width = 3 };
+    var btnCounterStartDown = new Button("-") { X = Pos.Right(btnCounterStartUp), Y = 0, Width = 3 };
+    var btnCounterStepUp = new Button("+") { X = Pos.Right(txtCounterStep) + 1, Y = 2, Width = 3 };
+    var btnCounterStepDown = new Button("-") { X = Pos.Right(btnCounterStepUp), Y = 2, Width = 3 };
+    var btnCounterDigitsUp = new Button("+") { X = Pos.Right(txtCounterDigits) + 1, Y = 4, Width = 3 };
+    var btnCounterDigitsDown = new Button("-") { X = Pos.Right(btnCounterDigitsUp), Y = 4, Width = 3 };
+    frameCounter.Add(
+        new Label("Start at:") { X = 1, Y = 0 },
+        txtCounterStart,
+        btnCounterStartUp,
+        btnCounterStartDown,
+        new Label("Step by:") { X = 1, Y = 2 },
+        txtCounterStep,
+        btnCounterStepUp,
+        btnCounterStepDown,
+        new Label("Digits:") { X = 1, Y = 4 },
+        txtCounterDigits,
+        btnCounterDigitsUp,
+        btnCounterDigitsDown);
+
+    var frameCase = new FrameView("Upper / Lower case")
+    {
+        X = Pos.Right(frameCounter),
+        Y = 0,
+        Width = Dim.Fill(),
+        Height = 7
+    };
+    var radioCaseMode = new RadioGroup(
+        new[]
+        {
+            (ustring) "Unchanged",
+            (ustring) "All upper case",
+            (ustring) "All lower case",
+            (ustring) "First letter of each word uppercase",
+            (ustring) "First letter upper case"
+        },
+        0)
+    {
+        X = 1,
+        Y = 0,
+        Width = Dim.Fill(1),
+        Height = Dim.Fill()
+    };
+    frameCase.Add(radioCaseMode);
+
+    var frameSearchReplace = new FrameView("Search & replace")
+    {
+        X = 0,
+        Y = Pos.Bottom(frameRenameMask),
+        Width = Dim.Fill(),
+        Height = 4
+    };
+    var txtSearchFor = new TextField("")
+    {
+        X = 15,
+        Y = 0,
+        Width = Dim.Fill(16)
+    };
+    var txtReplaceWith = new TextField("")
+    {
+        X = 15,
+        Y = 1,
+        Width = Dim.Fill(16)
+    };
+    frameSearchReplace.Add(
+        new Label("Search for:") { X = 1, Y = 0 },
+        txtSearchFor,
+        new Label("Replace with:") { X = 1, Y = 1 },
+        txtReplaceWith);
+
+    var statusLabel = new Label("")
+    {
+        X = 1,
+        Y = 0,
+        Width = Dim.Fill(2)
+    };
     var btnCancelBatchRename = new Button("F1 Cancel")
     {
         X = 1,
-        Y = Pos.AnchorEnd(1)
+        Y = 1
     };
-    frameControls.Add(btnCancelBatchRename);
+    var btnStartBatchRename = new Button("F5 Start")
+    {
+        X = Pos.Right(btnCancelBatchRename) + 2,
+        Y = 1
+    };
+    var frameActionButtons = new FrameView("")
+    {
+        X = 0,
+        Y = Pos.Bottom(frameSearchReplace),
+        Width = Dim.Fill(),
+        Height = Dim.Fill()
+    };
+    frameActionButtons.Add(statusLabel, btnCancelBatchRename, btnStartBatchRename);
+
+    frameControls.Add(
+        frameRenameMask,
+        frameCounter,
+        frameCase,
+        frameSearchReplace,
+        frameActionButtons);
 
     formBatchRename.Add(frameCurrentNames, frameFutureNames, frameControls);
+
+    bool syncingPreviewSelection = false;
+    BatchRenamePreviewResult? lastPreview = null;
+
+    void SyncPreviewSelection(ListView source, ListView target)
+    {
+        if (syncingPreviewSelection)
+            return;
+
+        syncingPreviewSelection = true;
+        target.SelectedItem = source.SelectedItem;
+        syncingPreviewSelection = false;
+    }
+
+    void SetNumericField(TextField field, int value)
+    {
+        field.Text = value.ToString();
+    }
+
+    bool TryReadOptions(out BatchRenameOptions options, out string? error)
+    {
+        options = null!;
+        error = null;
+
+        if (!int.TryParse(txtCounterStart.Text?.ToString(), out int counterStart))
+        {
+            error = "Counter 'Start at' must be a whole number.";
+            return false;
+        }
+
+        if (!int.TryParse(txtCounterStep.Text?.ToString(), out int counterStep))
+        {
+            error = "Counter 'Step by' must be a whole number.";
+            return false;
+        }
+
+        if (counterStep == 0)
+        {
+            error = "Counter 'Step by' cannot be zero.";
+            return false;
+        }
+
+        if (!int.TryParse(txtCounterDigits.Text?.ToString(), out int counterDigits))
+        {
+            error = "Counter 'Digits' must be a whole number.";
+            return false;
+        }
+
+        if (counterDigits < 1)
+        {
+            error = "Counter 'Digits' must be at least 1.";
+            return false;
+        }
+
+        options = new BatchRenameOptions
+        {
+            FileNameMask = txtFileNameMask.Text?.ToString() ?? "",
+            ExtensionMask = txtExtensionMask.Text?.ToString() ?? "",
+            SearchFor = txtSearchFor.Text?.ToString() ?? "",
+            ReplaceWith = txtReplaceWith.Text?.ToString() ?? "",
+            CounterStart = counterStart,
+            CounterStep = counterStep,
+            CounterDigits = counterDigits,
+            CaseMode = (BatchRenameCaseMode)radioCaseMode.SelectedItem
+        };
+        return true;
+    }
+
+    void UpdateFutureNames(IReadOnlyList<string> names)
+    {
+        int selectedIndex = Math.Clamp(listCurrentNames.SelectedItem, 0, Math.Max(0, names.Count - 1));
+        listFutureNames.SetSource(names.ToList());
+        listFutureNames.SelectedItem = selectedIndex;
+    }
+
+    void RefreshPreview()
+    {
+        if (!TryReadOptions(out BatchRenameOptions options, out string? error))
+        {
+            lastPreview = null;
+            UpdateFutureNames(currentNames);
+            statusLabel.Text = error ?? "Invalid batch rename settings.";
+            btnStartBatchRename.Enabled = false;
+            return;
+        }
+
+        lastPreview = BatchRenameEngine.BuildPreview(activePane.CurrentPath, selectedItems, options);
+        UpdateFutureNames(lastPreview.Items.Select(item =>
+            item.Error is null ? item.ProposedName : $"{item.ProposedName} [!]").ToList());
+        statusLabel.Text = lastPreview.Message;
+        btnStartBatchRename.Enabled = !lastPreview.HasErrors;
+    }
+
+    void ApplyBatchRename()
+    {
+        if (lastPreview is null)
+        {
+            RefreshPreview();
+            if (lastPreview is null)
+                return;
+        }
+
+        if (lastPreview.HasErrors)
+        {
+            MessageBox.ErrorQuery("Batch Rename", lastPreview.Message, "OK");
+            return;
+        }
+
+        BatchRenameApplyResult result = BatchRenameEngine.ApplyPreview(lastPreview);
+        if (!result.Success)
+        {
+            MessageBox.ErrorQuery("Batch Rename", string.Join("\n", result.Errors), "OK");
+            RefreshPreview();
+            return;
+        }
+
+        if (result.RenamedCount == 0)
+        {
+            MessageBox.Query("Batch Rename", "No files need renaming.", "OK");
+            return;
+        }
+
+        activePane.ClearMarks();
+        activePane.NavigateTo(activePane.CurrentPath);
+        UpdateInfoLabel(activePane);
+        UpdatePathDisplay();
+        CloseBatchRenameForm();
+    }
 
     void CloseBatchRenameForm()
     {
         Application.RequestStop();
     }
 
+    listCurrentNames.SelectedItemChanged += _ => SyncPreviewSelection(listCurrentNames, listFutureNames);
+    listFutureNames.SelectedItemChanged += _ => SyncPreviewSelection(listFutureNames, listCurrentNames);
+
+    txtFileNameMask.TextChanged += _ => RefreshPreview();
+    txtExtensionMask.TextChanged += _ => RefreshPreview();
+    txtSearchFor.TextChanged += _ => RefreshPreview();
+    txtReplaceWith.TextChanged += _ => RefreshPreview();
+    txtCounterStart.TextChanged += _ => RefreshPreview();
+    txtCounterStep.TextChanged += _ => RefreshPreview();
+    txtCounterDigits.TextChanged += _ => RefreshPreview();
+    radioCaseMode.SelectedItemChanged += _ => RefreshPreview();
+
+    btnCounterStartUp.Clicked += () =>
+    {
+        if (int.TryParse(txtCounterStart.Text?.ToString(), out int value))
+            SetNumericField(txtCounterStart, value + 1);
+    };
+    btnCounterStartDown.Clicked += () =>
+    {
+        if (int.TryParse(txtCounterStart.Text?.ToString(), out int value))
+            SetNumericField(txtCounterStart, value - 1);
+    };
+    btnCounterStepUp.Clicked += () =>
+    {
+        if (int.TryParse(txtCounterStep.Text?.ToString(), out int value))
+            SetNumericField(txtCounterStep, value + 1);
+    };
+    btnCounterStepDown.Clicked += () =>
+    {
+        if (int.TryParse(txtCounterStep.Text?.ToString(), out int value))
+        {
+            int nextValue = value - 1;
+            if (nextValue != 0)
+                SetNumericField(txtCounterStep, nextValue);
+        }
+    };
+    btnCounterDigitsUp.Clicked += () =>
+    {
+        if (int.TryParse(txtCounterDigits.Text?.ToString(), out int value))
+            SetNumericField(txtCounterDigits, Math.Max(1, value + 1));
+    };
+    btnCounterDigitsDown.Clicked += () =>
+    {
+        if (int.TryParse(txtCounterDigits.Text?.ToString(), out int value))
+            SetNumericField(txtCounterDigits, Math.Max(1, value - 1));
+    };
+
     btnCancelBatchRename.Clicked += CloseBatchRenameForm;
+    btnStartBatchRename.Clicked += ApplyBatchRename;
     formBatchRename.KeyPress += (e) =>
     {
-        if (e.KeyEvent.Key != Key.F1)
-            return;
-
-        CloseBatchRenameForm();
-        e.Handled = true;
+        switch (e.KeyEvent.Key)
+        {
+            case Key.F1:
+                CloseBatchRenameForm();
+                e.Handled = true;
+                break;
+            case Key.F5:
+                ApplyBatchRename();
+                e.Handled = true;
+                break;
+        }
     };
 
     isBatchRenameFormOpen = true;
     closeBatchRenameForm = CloseBatchRenameForm;
+    submitBatchRenameForm = ApplyBatchRename;
 
-    btnCancelBatchRename.SetFocus();
+    RefreshPreview();
+    txtFileNameMask.SetFocus();
     Application.Run(formBatchRename);
 
     isBatchRenameFormOpen = false;
     closeBatchRenameForm = null;
+    submitBatchRenameForm = null;
     activePane.SetFocusOnList();
     UpdatePathDisplay();
 }
