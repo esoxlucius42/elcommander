@@ -457,10 +457,13 @@ void CreateNewFolder()
 
 void ShowBatchRenameForm()
 {
-    const int batchRenameControlsHeight = 16;
+    // The controls pane contains nested FrameViews, so it needs enough room for
+    // both their content rows and their borders. If this budget is too small,
+    // the bottom action row is clipped off-screen at the minimum terminal size.
+    const int batchRenameControlsHeight = 17;
     const int batchRenameTopControlsHeight = 7;
     const int batchRenameSearchReplaceHeight = 5;
-    const int batchRenameActionHeight = 4;
+    const int batchRenameActionHeight = 3;
 
     if (isBatchRenameFormOpen)
         return;
@@ -673,21 +676,21 @@ void ShowBatchRenameForm()
         new Label("Replace with:") { X = 1, Y = 2 },
         txtReplaceWith);
 
-    var statusLabel = new Label("")
-    {
-        X = 1,
-        Y = 0,
-        Width = Dim.Fill(2)
-    };
     var btnCancelBatchRename = new Button("F1 Cancel")
     {
         X = 1,
-        Y = 1
+        Y = 0
     };
     var btnStartBatchRename = new Button("F5 Start")
     {
         X = Pos.Right(btnCancelBatchRename) + 2,
-        Y = 1
+        Y = 0
+    };
+    var statusLabel = new Label("")
+    {
+        X = Pos.Right(btnStartBatchRename) + 2,
+        Y = 0,
+        Width = Dim.Fill(1)
     };
     var frameActionButtons = new FrameView("")
     {
