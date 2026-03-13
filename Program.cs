@@ -589,28 +589,37 @@ void ShowBatchRenameForm()
         Width = 28,
         Height = batchRenameTopControlsHeight
     };
-    var txtCounterStart = new TextField("1") { X = 12, Y = 0, Width = 5 };
-    var txtCounterStep = new TextField("1") { X = 12, Y = 2, Width = 5 };
-    var txtCounterDigits = new TextField("1") { X = 12, Y = 4, Width = 5 };
-    var btnCounterStartUp = new Button("+") { X = Pos.Right(txtCounterStart) + 1, Y = 0, Width = 3 };
-    var btnCounterStartDown = new Button("-") { X = Pos.Right(btnCounterStartUp), Y = 0, Width = 3 };
-    var btnCounterStepUp = new Button("+") { X = Pos.Right(txtCounterStep) + 1, Y = 2, Width = 3 };
-    var btnCounterStepDown = new Button("-") { X = Pos.Right(btnCounterStepUp), Y = 2, Width = 3 };
-    var btnCounterDigitsUp = new Button("+") { X = Pos.Right(txtCounterDigits) + 1, Y = 4, Width = 3 };
-    var btnCounterDigitsDown = new Button("-") { X = Pos.Right(btnCounterDigitsUp), Y = 4, Width = 3 };
+    var txtCounterStart = new TextField("1")
+    {
+        X = Pos.AnchorEnd(9),
+        Y = 0,
+        Width = 8,
+        ColorScheme = batchRenameMaskFieldColors,
+        TextAlignment = TextAlignment.Right
+    };
+    var txtCounterStep = new TextField("1")
+    {
+        X = Pos.AnchorEnd(9),
+        Y = 2,
+        Width = 8,
+        ColorScheme = batchRenameMaskFieldColors,
+        TextAlignment = TextAlignment.Right
+    };
+    var txtCounterDigits = new TextField("1")
+    {
+        X = Pos.AnchorEnd(9),
+        Y = 4,
+        Width = 8,
+        ColorScheme = batchRenameMaskFieldColors,
+        TextAlignment = TextAlignment.Right
+    };
     frameCounter.Add(
         new Label("Start at:") { X = 1, Y = 0 },
         txtCounterStart,
-        btnCounterStartUp,
-        btnCounterStartDown,
         new Label("Step by:") { X = 1, Y = 2 },
         txtCounterStep,
-        btnCounterStepUp,
-        btnCounterStepDown,
         new Label("Digits:") { X = 1, Y = 4 },
-        txtCounterDigits,
-        btnCounterDigitsUp,
-        btnCounterDigitsDown);
+        txtCounterDigits);
 
     var frameCase = new FrameView("Upper / Lower case")
     {
@@ -707,11 +716,6 @@ void ShowBatchRenameForm()
         syncingPreviewSelection = true;
         target.SelectedItem = source.SelectedItem;
         syncingPreviewSelection = false;
-    }
-
-    void SetNumericField(TextField field, int value)
-    {
-        field.Text = value.ToString();
     }
 
     bool TryReadOptions(out BatchRenameOptions options, out string? error)
@@ -840,41 +844,6 @@ void ShowBatchRenameForm()
     txtCounterStep.TextChanged += _ => RefreshPreview();
     txtCounterDigits.TextChanged += _ => RefreshPreview();
     radioCaseMode.SelectedItemChanged += _ => RefreshPreview();
-
-    btnCounterStartUp.Clicked += () =>
-    {
-        if (int.TryParse(txtCounterStart.Text?.ToString(), out int value))
-            SetNumericField(txtCounterStart, value + 1);
-    };
-    btnCounterStartDown.Clicked += () =>
-    {
-        if (int.TryParse(txtCounterStart.Text?.ToString(), out int value))
-            SetNumericField(txtCounterStart, value - 1);
-    };
-    btnCounterStepUp.Clicked += () =>
-    {
-        if (int.TryParse(txtCounterStep.Text?.ToString(), out int value))
-            SetNumericField(txtCounterStep, value + 1);
-    };
-    btnCounterStepDown.Clicked += () =>
-    {
-        if (int.TryParse(txtCounterStep.Text?.ToString(), out int value))
-        {
-            int nextValue = value - 1;
-            if (nextValue != 0)
-                SetNumericField(txtCounterStep, nextValue);
-        }
-    };
-    btnCounterDigitsUp.Clicked += () =>
-    {
-        if (int.TryParse(txtCounterDigits.Text?.ToString(), out int value))
-            SetNumericField(txtCounterDigits, Math.Max(1, value + 1));
-    };
-    btnCounterDigitsDown.Clicked += () =>
-    {
-        if (int.TryParse(txtCounterDigits.Text?.ToString(), out int value))
-            SetNumericField(txtCounterDigits, Math.Max(1, value - 1));
-    };
 
     btnCancelBatchRename.Clicked += CloseBatchRenameForm;
     btnStartBatchRename.Clicked += ApplyBatchRename;
