@@ -573,14 +573,17 @@ void ShowBatchRenameForm()
         Width = Dim.Fill(2),
         ColorScheme = batchRenameMaskFieldColors
     };
+    var lblTemplateLegend = new Label("[N] - file name; [E] - extension; [C] - counter")
+    {
+        X = 1,
+        Y = 3
+    };
     frameRenameMask.Add(
         lblFileNameMask,
         txtFileNameMask,
         lblExtensionMask,
         txtExtensionMask,
-        new Label("[C] - counter") { X = 1, Y = 3 },
-        new Label("[N] - file name") { X = 1, Y = 4 },
-        new Label("[E] - extension") { X = 1, Y = 5 });
+        lblTemplateLegend);
 
     var frameCounter = new FrameView("Counter")
     {
