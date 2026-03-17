@@ -1,6 +1,6 @@
 using Terminal.Gui;
 
-public enum SortColumn { Name, Size, Date }
+public enum SortColumn { Name, Extension, Size, Date }
 
 public class FileExplorerPane : IDisposable
 {
@@ -263,6 +263,13 @@ public class FileExplorerPane : IDisposable
     private IEnumerable<FileListItem> SortFiles(IEnumerable<FileListItem> files) =>
         _sortColumn switch
         {
+            SortColumn.Extension => _sortAscending
+                ? files
+                    .OrderBy(f => Path.GetExtension(f.Name), StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                : files
+                    .OrderByDescending(f => Path.GetExtension(f.Name), StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(f => f.Name, StringComparer.OrdinalIgnoreCase),
             SortColumn.Size => _sortAscending
                 ? files.OrderBy(f => f.SizeBytes)
                 : files.OrderByDescending(f => f.SizeBytes),
@@ -751,6 +758,7 @@ class FileListHeaderView : View
     // Layout constants — must match FileListDataSource.Render() right column:
     // sep(1) + SIZE(8) + sep(1) + DATE(16) + sep(1) + ATR(3) = 30 chars
     private const int RightHeaderLength = 30;
+    private const int ExtensionHeaderLength = 4;
 
     public SortColumn CurrentSort { get; set; } = SortColumn.Name;
     public bool SortAscending { get; set; } = true;
@@ -769,10 +777,13 @@ class FileListHeaderView : View
 
         int x = e.MouseEvent.X;
         int nameMax = Math.Max(1, Bounds.Width - RightHeaderLength);
+        int extensionStart = Math.Max(1, nameMax - ExtensionHeaderLength);
 
         SortColumn? clicked = null;
-        if (x < nameMax)
+        if (x < extensionStart)
             clicked = SortColumn.Name;
+        else if (x < nameMax)
+            clicked = SortColumn.Extension;
         else if (x >= nameMax + 1 && x <= nameMax + 8)    // SIZE (8 chars) in right header
             clicked = SortColumn.Size;
         else if (x >= nameMax + 10 && x <= nameMax + 25)  // DATE (16 chars) in right header
@@ -795,7 +806,8 @@ class FileListHeaderView : View
         char ind = SortAscending ? '▲' : '▼';
 
         // Indicator is appended after the full column name; each label keeps its fixed width.
-        string nameLabel = CurrentSort == SortColumn.Name ? "NAME" + ind : "NAME";          // variable-width, PadRight fills the rest
+        string nameLabel = CurrentSort == SortColumn.Name ? "NAME" + ind : "NAME";
+        string extensionLabel = CurrentSort == SortColumn.Extension ? "EXT" + ind : "EXT ";
         string sizeLabel = CurrentSort == SortColumn.Size ? "SIZE   " + ind : "SIZE    ";   // 8 chars
         string dateLabel = CurrentSort == SortColumn.Date ? "DATE" + ind + "           " : "DATE            "; // 16 chars
 
@@ -803,7 +815,10 @@ class FileListHeaderView : View
         string rightHeader = " " + sizeLabel + " " + dateLabel + " " + "ATR";
 
         int nameMax = Math.Max(1, width - rightHeader.Length);
-        string display = nameLabel.PadRight(nameMax) + rightHeader;
+        string nameArea = nameMax <= ExtensionHeaderLength
+            ? nameLabel.PadRight(nameMax)
+            : nameLabel.PadRight(nameMax - ExtensionHeaderLength) + extensionLabel;
+        string display = nameArea + rightHeader;
         if (display.Length > width) display = display[..width];
         if (display.Length < width) display = display.PadRight(width);
 
