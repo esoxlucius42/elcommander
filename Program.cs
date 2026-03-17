@@ -312,7 +312,12 @@ catch (Exception ex)
 {
     MessageBox.ErrorQuery("Fatal Error", ex.Message, "OK");
 }
-Application.Shutdown();
+finally
+{
+    Application.Shutdown();
+    leftPane.Dispose();
+    rightPane.Dispose();
+}
 
 // ── File operations ───────────────────────────────────────────────────────────
 
@@ -389,7 +394,8 @@ void CopySelected()
     }
 
     activePane.ClearMarks();
-    targetPane.NavigateTo(targetPane.CurrentPath);
+    activePane.RefreshCurrentDirectory();
+    targetPane.RefreshCurrentDirectory();
     if (errors.Count > 0)
         MessageBox.ErrorQuery("Copy errors", string.Join("\n", errors), "OK");
 }
@@ -420,8 +426,8 @@ void MoveSelected()
     }
 
     activePane.ClearMarks();
-    activePane.NavigateTo(activePane.CurrentPath);
-    targetPane.NavigateTo(targetPane.CurrentPath);
+    activePane.RefreshCurrentDirectory();
+    targetPane.RefreshCurrentDirectory();
     if (errors.Count > 0)
         MessageBox.ErrorQuery("Move errors", string.Join("\n", errors), "OK");
 }
@@ -444,7 +450,7 @@ void CreateNewFolder()
             try
             {
                 Directory.CreateDirectory(newPath);
-                activePane.NavigateTo(activePane.CurrentPath);
+                activePane.RefreshCurrentDirectory();
             }
             catch (Exception ex) { MessageBox.ErrorQuery("Error", ex.Message, "OK"); }
         }
@@ -837,9 +843,7 @@ void ShowBatchRenameForm()
         }
 
         activePane.ClearMarks();
-        activePane.NavigateTo(activePane.CurrentPath);
-        UpdateInfoLabel(activePane);
-        UpdatePathDisplay();
+        activePane.RefreshCurrentDirectory();
         CloseBatchRenameForm();
     }
 
@@ -914,7 +918,7 @@ void DeleteSelected()
     }
 
     activePane.ClearMarks();
-    activePane.NavigateTo(activePane.CurrentPath);
+    activePane.RefreshCurrentDirectory();
     if (errors.Count > 0)
         MessageBox.ErrorQuery("Delete errors", string.Join("\n", errors), "OK");
 }

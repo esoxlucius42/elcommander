@@ -2,19 +2,23 @@ using Terminal.Gui;
 
 public enum SortColumn { Name, Size, Date }
 
-public class FileExplorerPane
+public class FileExplorerPane : IDisposable
 {
     private enum DragMarkMode { Select, Deselect }
+    private readonly record struct FileItemIdentity(string Name, bool IsDirectory);
 
     public FrameView Frame { get; }
     public string CurrentPath { get; private set; }
 
     private readonly PathTextField _pathField;
+    private readonly PathActionButton _refreshButton;
     private readonly PathActionButton _addFavoriteButton;
     private readonly PathActionButton _removeFavoriteButton;
     private readonly FileListView _fileList;
     private readonly FileListHeaderView _headerView;
+    private readonly object _refreshLock = new();
     private FileListDataSource? _dataSource;
+    private FileSystemWatcher? _directoryWatcher;
     private List<string> _favoriteDirectories;
 
     private SortColumn _sortColumn = SortColumn.Name;
@@ -22,6 +26,8 @@ public class FileExplorerPane
     private DragMarkMode? _dragMarkMode;
     private int _lastDragItemIndex = -1;
     private bool _suppressNextRightClick;
+    private bool _refreshScheduled;
+    private bool _disposed;
 
     public event Action<FileExplorerPane>? PathChanged;
     public event Action<FileExplorerPane>? GotFocus;
@@ -44,7 +50,7 @@ public class FileExplorerPane
         _pathField = new PathTextField(CurrentPath)
         {
             X = 0, Y = 0,
-            Width = Dim.Fill(9),
+            Width = Dim.Fill(13),
             Height = 1,
             ColorScheme = new ColorScheme
             {
@@ -56,9 +62,17 @@ public class FileExplorerPane
             }
         };
 
-        _addFavoriteButton = new PathActionButton("[+]")
+        _refreshButton = new PathActionButton("[@]")
         {
             X = Pos.Right(_pathField) + 2,
+            Y = 0,
+            Width = 3,
+            Height = 1
+        };
+
+        _addFavoriteButton = new PathActionButton("[+]")
+        {
+            X = Pos.Right(_refreshButton) + 1,
             Y = 0,
             Width = 3,
             Height = 1
@@ -96,7 +110,7 @@ public class FileExplorerPane
             }
         };
 
-        Frame.Add(_pathField, _addFavoriteButton, _removeFavoriteButton, _headerView, _fileList);
+        Frame.Add(_pathField, _refreshButton, _addFavoriteButton, _removeFavoriteButton, _headerView, _fileList);
 
         _headerView.SortHeaderClicked += col =>
         {
@@ -154,6 +168,11 @@ public class FileExplorerPane
                 e.Handled = true;
             }
         };
+        _refreshButton.Clicked += () =>
+        {
+            GotFocus?.Invoke(this);
+            RefreshCurrentDirectory();
+        };
         _addFavoriteButton.Clicked += () =>
         {
             GotFocus?.Invoke(this);
@@ -166,11 +185,13 @@ public class FileExplorerPane
         };
         _fileList.Enter += (_) => GotFocus?.Invoke(this);
         _pathField.Enter += (_) => GotFocus?.Invoke(this);
+        _refreshButton.Enter += (_) => GotFocus?.Invoke(this);
         _addFavoriteButton.Enter += (_) => GotFocus?.Invoke(this);
         _removeFavoriteButton.Enter += (_) => GotFocus?.Invoke(this);
         _fileList.SelectedItemChanged += (_) => SelectionChanged?.Invoke(this);
 
-        LoadDirectory(CurrentPath);
+        ReloadDirectory(CurrentPath, preserveState: false);
+        RebindDirectoryWatcher();
         SyncPathInput();
     }
 
@@ -202,32 +223,40 @@ public class FileExplorerPane
 
         CurrentPath = Path.GetFullPath(path);
         SyncPathInput();
-        LoadDirectory(CurrentPath);
+        RebindDirectoryWatcher();
+        ReloadDirectory(CurrentPath, preserveState: false);
         PathChanged?.Invoke(this);
     }
 
-    private void LoadDirectory(string path)
+    public void RefreshCurrentDirectory()
+    {
+        if (!Directory.Exists(CurrentPath))
+        {
+            SyncPathInput();
+            return;
+        }
+
+        if (!ReloadDirectory(CurrentPath, preserveState: true))
+            return;
+
+        SelectionChanged?.Invoke(this);
+    }
+
+    private bool ReloadDirectory(string path, bool preserveState)
     {
         ResetDragSelection();
 
+        var previousState = preserveState ? CaptureViewState() : null;
+
         try
         {
-            var di = new DirectoryInfo(path);
-            var dirs = di.GetDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
-                         .Select(FileListItem.FromDir);
-            var files = di.GetFiles().Select(FileListItem.FromFile);
-
-            var items = new List<FileListItem> { FileListItem.ParentDir() };
-            items.AddRange(dirs);
-            items.AddRange(SortFiles(files));
-
-            _dataSource = new FileListDataSource(items);
-            _fileList.Source = _dataSource;
-            _fileList.SelectedItem = 0;
+            ApplyItems(BuildDirectoryItems(path), previousState);
+            return true;
         }
         catch
         {
             SyncPathInput();
+            return false;
         }
     }
 
@@ -247,24 +276,10 @@ public class FileExplorerPane
 
     private void ApplySort()
     {
-        if (_dataSource == null) return;
+        if (!ReloadDirectory(CurrentPath, preserveState: true))
+            return;
 
-        ResetDragSelection();
-
-        var all = Enumerable.Range(0, _dataSource.Count).Select(i => _dataSource[i]!).ToList();
-        var parent = all.Where(i => i.Name == "..").ToList();
-        var dirs   = all.Where(i => i.IsDirectory && i.Name != "..")
-                        .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase);
-        var files  = all.Where(i => !i.IsDirectory);
-
-        var items = new List<FileListItem>();
-        items.AddRange(parent);
-        items.AddRange(dirs);
-        items.AddRange(SortFiles(files));
-
-        _dataSource = new FileListDataSource(items);
-        _fileList.Source = _dataSource;
-        _fileList.SetNeedsDisplay();
+        SelectionChanged?.Invoke(this);
     }
 
     public FileListItem? SelectedItem => _dataSource?[_fileList.SelectedItem];
@@ -546,6 +561,189 @@ public class FileExplorerPane
         index >= 0 &&
         index < _dataSource.Count &&
         _dataSource[index]?.Name != "..";
+
+    private List<FileListItem> BuildDirectoryItems(string path)
+    {
+        var di = new DirectoryInfo(path);
+        var dirs = di.GetDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+                     .Select(FileListItem.FromDir);
+        var files = di.GetFiles().Select(FileListItem.FromFile);
+
+        var items = new List<FileListItem> { FileListItem.ParentDir() };
+        items.AddRange(dirs);
+        items.AddRange(SortFiles(files));
+        return items;
+    }
+
+    private PaneViewState? CaptureViewState()
+    {
+        if (_dataSource == null)
+            return null;
+
+        FileItemIdentity? selectedIdentity = null;
+        var selectedItem = SelectedItem;
+        if (selectedItem != null)
+            selectedIdentity = GetIdentity(selectedItem);
+
+        var markedItems = new HashSet<FileItemIdentity>();
+        for (int i = 1; i < _dataSource.Count; i++)
+        {
+            if (!_dataSource.IsUserMarked(i))
+                continue;
+
+            var item = _dataSource[i];
+            if (item != null)
+                markedItems.Add(GetIdentity(item));
+        }
+
+        return new PaneViewState(selectedIdentity, markedItems, _fileList.TopItem);
+    }
+
+    private void ApplyItems(IReadOnlyList<FileListItem> items, PaneViewState? previousState)
+    {
+        _dataSource = new FileListDataSource(items);
+        _fileList.Source = _dataSource;
+
+        if (previousState == null)
+        {
+            _fileList.SelectedItem = 0;
+            _fileList.TopItem = 0;
+            _fileList.SetNeedsDisplay();
+            return;
+        }
+
+        foreach (var markedIdentity in previousState.MarkedItems)
+        {
+            int markedIndex = FindItemIndex(markedIdentity);
+            if (markedIndex > 0)
+                _dataSource.SetUserMark(markedIndex, true);
+        }
+
+        _fileList.SelectedItem = FindItemIndex(previousState.SelectedItem) switch
+        {
+            int selectedIndex when selectedIndex >= 0 => selectedIndex,
+            _ => 0
+        };
+        _fileList.TopItem = Math.Clamp(previousState.TopItem, 0, Math.Max(0, _dataSource.Count - 1));
+        _fileList.SetNeedsDisplay();
+    }
+
+    private int FindItemIndex(FileItemIdentity? identity)
+    {
+        if (_dataSource == null || identity is null)
+            return -1;
+
+        for (int i = 0; i < _dataSource.Count; i++)
+        {
+            var item = _dataSource[i];
+            if (item != null && GetIdentity(item) == identity.Value)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static FileItemIdentity GetIdentity(FileListItem item) =>
+        new(item.Name, item.IsDirectory);
+
+    private void RebindDirectoryWatcher()
+    {
+        DisposeDirectoryWatcher();
+
+        _directoryWatcher = new FileSystemWatcher(CurrentPath)
+        {
+            IncludeSubdirectories = false,
+            NotifyFilter = NotifyFilters.FileName |
+                           NotifyFilters.DirectoryName |
+                           NotifyFilters.LastWrite |
+                           NotifyFilters.Size |
+                           NotifyFilters.CreationTime
+        };
+
+        _directoryWatcher.Changed += HandleWatchedDirectoryChanged;
+        _directoryWatcher.Created += HandleWatchedDirectoryChanged;
+        _directoryWatcher.Deleted += HandleWatchedDirectoryChanged;
+        _directoryWatcher.Renamed += HandleWatchedDirectoryRenamed;
+        _directoryWatcher.Error += HandleWatchedDirectoryError;
+        _directoryWatcher.EnableRaisingEvents = true;
+    }
+
+    private void HandleWatchedDirectoryChanged(object sender, FileSystemEventArgs e) =>
+        QueueRefresh();
+
+    private void HandleWatchedDirectoryRenamed(object sender, RenamedEventArgs e) =>
+        QueueRefresh();
+
+    private void HandleWatchedDirectoryError(object sender, ErrorEventArgs e) =>
+        QueueRefresh();
+
+    private void QueueRefresh()
+    {
+        lock (_refreshLock)
+        {
+            if (_disposed || _refreshScheduled)
+                return;
+
+            _refreshScheduled = true;
+        }
+
+        var mainLoop = Application.MainLoop;
+        if (mainLoop == null)
+        {
+            ClearScheduledRefresh();
+            return;
+        }
+
+        mainLoop.Invoke(() =>
+        {
+            if (_disposed)
+            {
+                ClearScheduledRefresh();
+                return;
+            }
+
+            mainLoop.AddTimeout(TimeSpan.FromMilliseconds(150), _ =>
+            {
+                ClearScheduledRefresh();
+                RefreshCurrentDirectory();
+                return false;
+            });
+        });
+    }
+
+    private void ClearScheduledRefresh()
+    {
+        lock (_refreshLock)
+            _refreshScheduled = false;
+    }
+
+    private void DisposeDirectoryWatcher()
+    {
+        if (_directoryWatcher == null)
+            return;
+
+        _directoryWatcher.Changed -= HandleWatchedDirectoryChanged;
+        _directoryWatcher.Created -= HandleWatchedDirectoryChanged;
+        _directoryWatcher.Deleted -= HandleWatchedDirectoryChanged;
+        _directoryWatcher.Renamed -= HandleWatchedDirectoryRenamed;
+        _directoryWatcher.Error -= HandleWatchedDirectoryError;
+        _directoryWatcher.Dispose();
+        _directoryWatcher = null;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        DisposeDirectoryWatcher();
+    }
+
+    private sealed record PaneViewState(
+        FileItemIdentity? SelectedItem,
+        HashSet<FileItemIdentity> MarkedItems,
+        int TopItem);
 }
 
 class FileListHeaderView : View
